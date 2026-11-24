@@ -27,6 +27,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "code"))
 from fogsim import generate_instance
 from fogsim.milp import run_milp
 from fogsim.greedy import run_greedy, run_greedy_cp
+from fogsim.ga import run_ga
 
 OUT = os.path.join(os.path.dirname(__file__), "results", "floor_check.csv")
 
@@ -56,12 +57,14 @@ def main():
                   FLOOR: np.where(mandatory, FLOOR, 0.0)}
         print(f"{name}: {int(mandatory.sum())} of {inst.n} tasks mandatory")
         for fl_name, fl in floors.items():
-            for meth in ("milp", "greedy_cp", "greedy"):
+            for meth in ("milp", "greedy_cp", "greedy", "ga"):
                 t0 = time.time()
                 if meth == "milp":
                     r = run_milp(inst, ell_min=fl)
                 elif meth == "greedy_cp":
                     r = run_greedy_cp(inst, ell_min=fl)
+                elif meth == "ga":
+                    r = run_ga(inst, ell_min=fl)
                 else:
                     # uniform greedy: one global fraction, so the floor
                     # is the mandatory level itself

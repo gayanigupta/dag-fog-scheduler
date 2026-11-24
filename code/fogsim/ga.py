@@ -9,10 +9,11 @@ import numpy as np
 
 
 def run_ga(inst, pop_size=40, gens=60, seed=0,
-           lam1=10.0, lam2=1.0, sigma=0.1):
+           lam1=10.0, lam2=1.0, sigma=0.1, ell_min=0.0):
     rng = np.random.default_rng(seed)
     n, m = inst.n, inst.m
     elig = [list(np.nonzero(inst.P[i])[0]) for i in range(n)]
+    ell_min = np.broadcast_to(np.asarray(ell_min, dtype=float), n)
 
     def fitness(ind):
         f, ell = ind
@@ -30,7 +31,7 @@ def run_ga(inst, pop_size=40, gens=60, seed=0,
                 j = max(inst.preds[i], key=lambda j: inst.D[j, i])
                 if f[j] in elig[i]:
                     f[i] = f[j]
-        return f, rng.uniform(0.5, 1.0, n)
+        return f, np.maximum(ell_min, rng.uniform(0.5, 1.0, n))
 
     pop = [make() for _ in range(pop_size)]
     for _ in range(gens):
@@ -50,7 +51,8 @@ def run_ga(inst, pop_size=40, gens=60, seed=0,
             mutate = rng.random(n) < 0.1
             for i in np.nonzero(mutate)[0]:
                 f[i] = rng.choice(elig[i])
-                ell[i] = np.clip(ell[i] + rng.normal(0, sigma), 0, 1)
+                ell[i] = np.clip(ell[i] + rng.normal(0, sigma),
+                                 ell_min[i], 1)
 
             # repair: co-locate one random task with the predecessor that
             # sends it the most data, when that node is eligible
