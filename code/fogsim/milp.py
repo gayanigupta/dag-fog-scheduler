@@ -8,7 +8,7 @@ from scipy.optimize import milp, linprog, LinearConstraint, Bounds
 from scipy.sparse import lil_matrix, vstack as sp_vstack
 
 
-def _build_lp(inst):
+def _build_lp(inst, ell_min=None):
     """Linear constraints shared by the MILP and its LP relaxation.
 
     Variables: e[n*m] (assignment), l[n*m] (execution fraction), y[n].
@@ -16,6 +16,10 @@ def _build_lp(inst):
       y_j - y_i + sum_b e_jb c_ji^{ba} + t_ia l_ia + M e_ia <= M
     which is y_i >= y_j + comm + exec exactly when e_ia = 1, and is
     vacuous otherwise (M = t_max + max communication delay).
+
+    ell_min is a scalar or per-task minimum execution fraction: a
+    positive floor adds l_ia >= ell_min_i * e_ia, so a mandatory task
+    must run at least that fraction wherever it is placed.
     """
     n, m = inst.n, inst.m
     nm = n * m
@@ -40,6 +44,12 @@ def _build_lp(inst):
     for i in range(n):                                   # l_ia <= e_ia
         for a in range(m):
             add({li(i, a): 1.0, ei(i, a): -1.0}, ub=0.0)
+    if ell_min is not None:                              # l_ia >= fl_i e_ia
+        fl = np.broadcast_to(np.asarray(ell_min, dtype=float), n)
+        for i in range(n):
+            if fl[i] > 0:
+                for a in range(m):
+                    add({li(i, a): 1.0, ei(i, a): -fl[i]}, lb=0.0)
     for i in range(n):                                   # start times
         for a in range(m):
             base = {yi(i): -1.0, li(i, a): inst.t[i, a], ei(i, a): M}
@@ -86,8 +96,8 @@ def _extract(res, inst):
     return assign, ell
 
 
-def run_milp(inst, time_limit=60.0):
-    c, con, bounds, nv, _ = _build_lp(inst)
+def run_milp(inst, time_limit=60.0, ell_min=None):
+    c, con, bounds, nv, _ = _build_lp(inst, ell_min=ell_min)
     integ = np.zeros(nv)
     integ[:inst.n * inst.m] = 1.0
     res = milp(c, constraints=con, integrality=integ, bounds=bounds,

@@ -166,9 +166,11 @@ def run_greedy_cp(inst, beta=0.5, delta=0.005, ell_min=0.0):
     Same placement policy as run_greedy, but instead of one global
     fraction it repeatedly schedules, finds the path that sets the
     makespan, and lowers ell only on those tasks.  Tasks off the binding
-    path keep full accuracy.
+    path keep full accuracy.  ell_min may be a scalar or a per-task
+    vector, so mandatory tasks can carry their own floor.
     """
     n = inst.n
+    ell_min = np.broadcast_to(np.asarray(ell_min, dtype=float), n)
     priority, density = _priority_terms(inst, beta)
     succ = [[] for _ in range(n)]
     for (j, i) in inst.edges:
@@ -183,8 +185,8 @@ def run_greedy_cp(inst, beta=0.5, delta=0.005, ell_min=0.0):
         if y.max() <= inst.t_max:
             return assign, ell
         path = _binding_path(inst, assign, y)
-        if all(ell[i] <= ell_min for i in path):
+        if all(ell[i] <= ell_min[i] for i in path):
             return None            # binding path already at the floor
         for i in path:
-            ell[i] = max(ell_min, ell[i] - delta)
+            ell[i] = max(ell_min[i], ell[i] - delta)
     return None
