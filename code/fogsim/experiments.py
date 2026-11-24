@@ -140,8 +140,8 @@ def plot():
         if not os.path.exists(csv):
             continue
         df = pd.read_csv(csv)
-        base_csv = os.path.join(ROOT, "revisions", "results",
-                                "2026-11-12", "dagmec_experiments.csv")
+        base_csv = os.path.join(ROOT, "experiments", "results",
+                                "comparisons", "dagmec_experiments.csv")
         if os.path.exists(base_csv):
             bdf = pd.read_csv(base_csv)
             bdf = bdf[bdf["experiment"] == kind][
